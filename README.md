@@ -36,7 +36,7 @@
 
 ---
 ### 📌 Notes
-I am using JDK 11 and Netbeans v18
+I am using JDK 11 and Netbeans v18  
 I am using v2.5.0 jogl-all.jar and glugen-rt.jar
 
 This project must be run with the correct JOGL libraries in both classpath and native library path.
