@@ -36,6 +36,6 @@
 
 ---
 ### 📌 Notes
-Make sure Java (JDK 8 or above) is installed.  
+I am using JDK 11 and Netbeans v18
 
 This project must be run with the correct JOGL libraries in both classpath and native library path.
