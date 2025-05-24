@@ -1,0 +1,14 @@
+# Ignore build output
+build/
+dist/
+*.class
+
+# Ignore NetBeans cache
+nbbuild/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+
+# macOS/Windows system files
+.DS_Store
+Thumbs.db
