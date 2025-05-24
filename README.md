@@ -33,3 +33,9 @@
 -   **Q / E** – Move camera up / down
     
 -   **Arrow Keys** – Rotate the camera view
+
+---
+### 📌 Notes
+Make sure Java (JDK 8 or above) is installed.  
+
+This project must be run with the correct JOGL libraries in both classpath and native library path.
