@@ -985,7 +985,6 @@ public class CityScene implements GLEventListener, KeyListener {
         gl.glDisable(GL2.GL_BLEND);
         
         
-        
         gl.glEnable(GL2.GL_LIGHTING);
         gl.glPopMatrix();
     }
