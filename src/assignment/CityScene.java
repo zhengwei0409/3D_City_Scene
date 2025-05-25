@@ -31,6 +31,9 @@ public class CityScene implements GLEventListener, KeyListener {
     private static final float ROAD_WIDTH = 1.5f;
     private static final float SPACING = BUILDING_SIZE + ROAD_WIDTH;
     
+    private float trafficLightTimer = 0.0f;
+    private int currentLight = 0; // 0=red, 1=yellow, 2=green
+    
     public static void main(String[] args) {
         JFrame frame = new JFrame("JOGL City Scene");
         GLProfile profile = GLProfile.getDefault();
@@ -106,12 +109,20 @@ public class CityScene implements GLEventListener, KeyListener {
             // Draw vegetation
             drawTrees(gl);
             drawBrushes(gl); // ADD THIS LINE
+            
+            drawTrafficLights(gl);
 
             // Draw other elements
             drawCars(gl);
             drawStreetLights(gl);
 
             time += 0.016f;
+            
+            trafficLightTimer += 0.016f;
+            if (trafficLightTimer > 3.0f) { // Change every 3 seconds
+                currentLight = (currentLight + 1) % 3;
+                trafficLightTimer = 0.0f;
+            }
     }
     
     private void drawBuildingGrid(GL2 gl) {
@@ -477,7 +488,70 @@ public class CityScene implements GLEventListener, KeyListener {
         }
     }
     
+   private void drawTrafficLight(GL2 gl, float x, float y, float z) {
+    gl.glPushMatrix();
+    gl.glTranslatef(x, y, z);
+    
+    // Traffic light pole
+    gl.glColor3f(0.3f, 0.3f, 0.3f);
+    gl.glBegin(GL2.GL_QUADS);
+    gl.glVertex3f(-0.05f, 0.0f, -0.05f);
+    gl.glVertex3f(0.05f, 0.0f, -0.05f);
+    gl.glVertex3f(0.05f, 3.0f, -0.05f);
+    gl.glVertex3f(-0.05f, 3.0f, -0.05f);
+    gl.glEnd();
+    
+    // Traffic light box
+    gl.glColor3f(0.2f, 0.2f, 0.2f);
+    gl.glPushMatrix();
+    gl.glTranslatef(0.0f, 2.7f, 0.0f);
+    gl.glScalef(0.3f, 0.6f, 0.2f);
+    drawCube(gl);
+    gl.glPopMatrix();
+    
+    // Red light
+    if (currentLight == 0) {
+        gl.glColor3f(1.0f, 0.2f, 0.2f); // Bright red when active
+    } else {
+        gl.glColor3f(0.3f, 0.1f, 0.1f); // Dark red when inactive
+    }
+    gl.glPushMatrix();
+    gl.glTranslatef(0.0f, 2.9f, 0.12f);
+    drawSphere(gl, 0.08f);
+    gl.glPopMatrix();
+    
+    // Yellow light
+    if (currentLight == 1) {
+        gl.glColor3f(1.0f, 1.0f, 0.2f); // Bright yellow when active
+    } else {
+        gl.glColor3f(0.3f, 0.3f, 0.1f); // Dark yellow when inactive
+    }
+    gl.glPushMatrix();
+    gl.glTranslatef(0.0f, 2.7f, 0.12f);
+    drawSphere(gl, 0.08f);
+    gl.glPopMatrix();
+    
+    // Green light
+    if (currentLight == 2) {
+        gl.glColor3f(0.2f, 1.0f, 0.2f); // Bright green when active
+    } else {
+        gl.glColor3f(0.1f, 0.3f, 0.1f); // Dark green when inactive
+    }
+    gl.glPushMatrix();
+    gl.glTranslatef(0.0f, 2.5f, 0.12f);
+    drawSphere(gl, 0.08f);
+    gl.glPopMatrix();
+    
+    gl.glPopMatrix();
+}
    
+   private void drawTrafficLights(GL2 gl) {
+    // Traffic lights at major intersections
+    drawTrafficLight(gl, -1.0f, 0.0f, -1.0f);  // Northwest intersection
+    drawTrafficLight(gl, 1.0f, 0.0f, -1.0f);   // Northeast intersection
+    drawTrafficLight(gl, -1.0f, 0.0f, 1.0f);   // Southwest intersection
+    drawTrafficLight(gl, 1.0f, 0.0f, 1.0f);    // Southeast intersection
+}
     
     private void drawRoads(GL2 gl) {
         gl.glColor3f(0.3f, 0.3f, 0.3f); // Dark gray roads
