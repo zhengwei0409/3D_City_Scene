@@ -12,7 +12,9 @@ import javax.swing.*;
 
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.glu.GLU;
+import com.jogamp.opengl.glu.GLUquadric;
 import com.jogamp.opengl.util.FPSAnimator;
+import com.jogamp.opengl.util.gl2.GLUT;
 
 
 import java.awt.event.KeyEvent;
@@ -111,6 +113,9 @@ public class CityScene implements GLEventListener, KeyListener {
             drawBrushes(gl); // ADD THIS LINE
             
             drawTrafficLights(gl);
+            
+            // Draw clouds
+            drawClouds(gl);
 
             // Draw other elements
             drawCars(gl);
@@ -139,6 +144,10 @@ public class CityScene implements GLEventListener, KeyListener {
     
     // Shop building (bottom-right quadrant)
     drawShopBuilding(gl, 3.0f, 0, 3.0f, 2.5f);
+    
+    // KLCC Petronas Twin Towers 
+    drawTwinTowers(gl, 6.0f, 0, -5.0f);
+
     }
 
     // BUILDING TYPES
@@ -460,6 +469,65 @@ public class CityScene implements GLEventListener, KeyListener {
                 gl.glEnd();
             }
         }
+    }
+
+    private void drawTwinTowers(GL2 gl, float x, float y, float z) {
+        float towerHeight = 8.0f;
+        int segments = 5; // number of truncated cones stacked
+        float baseRadius = 0.6f; // largest radius at bottom
+        float topRadius = 0.15f; // smallest radius at top
+        float spacing = 1.5f;
+
+        float segmentHeight = towerHeight / segments;
+        float radiusStep = (baseRadius - topRadius) / segments;
+        
+        float greyR = 0.6f;
+        float greyG = 0.6f;
+        float greyB = 0.6f;
+
+        // Draw left tower with stacked truncated cones
+        gl.glPushMatrix();
+        gl.glTranslatef(x - spacing / 2, y, z);
+        gl.glRotatef(-90f, 1f, 0f, 0f); 
+        gl.glColor3f(greyR, greyG, greyB);
+
+        for (int i = 0; i < segments; i++) {
+            float currentBaseRadius = baseRadius - i * radiusStep;
+            float currentTopRadius = baseRadius - (i + 1) * radiusStep;
+            drawCylinder(gl, currentBaseRadius, currentTopRadius, segmentHeight);
+            gl.glTranslatef(0, 0, segmentHeight); 
+        }
+        gl.glPopMatrix();
+
+        // Draw right tower with stacked truncated cones
+        gl.glPushMatrix();
+        gl.glTranslatef(x + spacing / 2, y, z);
+        gl.glRotatef(-90f, 1f, 0f, 0f);
+        gl.glColor3f(greyR, greyG, greyB);
+
+        for (int i = 0; i < segments; i++) {
+            float currentBaseRadius = baseRadius - i * radiusStep;
+            float currentTopRadius = baseRadius - (i + 1) * radiusStep;
+            drawCylinder(gl, currentBaseRadius, currentTopRadius, segmentHeight);
+            gl.glTranslatef(0, 0, segmentHeight);
+        }
+        gl.glPopMatrix();
+
+        // Draw skybridge
+        gl.glPushMatrix();
+        gl.glTranslatef(x, y + towerHeight * 0.5f, z);
+        gl.glScalef(spacing, 0.1f, 0.3f);
+        gl.glColor3f(0.6f, 0.6f, 0.6f);
+        drawCube(gl);
+        gl.glPopMatrix();
+    }
+
+    private void drawCylinder(GL2 gl, float baseRadius, float topRadius, float height) {
+        GLU glu = GLU.createGLU();
+        GLUquadric quad = glu.gluNewQuadric();
+        glu.gluQuadricNormals(quad, GLU.GLU_SMOOTH);
+        glu.gluCylinder(quad, baseRadius, topRadius, height, 20, 20);
+        glu.gluDeleteQuadric(quad);
     }
 
     private void drawSidewalks(GL2 gl) {
@@ -835,6 +903,53 @@ public class CityScene implements GLEventListener, KeyListener {
             gl.glEnd();
         }
     }
+    
+    private void drawClouds(GL2 gl) {
+        GLU glu = new GLU();
+        GLUquadric quadric = glu.gluNewQuadric();
+
+        gl.glPushMatrix();
+        gl.glColor4f(1.0f, 1.0f, 1.0f, 0.8f); // Semi-transparent white
+
+        // Enable blending for transparency
+        gl.glEnable(GL2.GL_BLEND);
+        gl.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
+
+        // Example cloud cluster positions
+        float[][] cloudPositions = {
+            { -4.0f, 5.0f, -5.0f },
+            {  0.0f, 6.0f, -6.0f },
+            {  3.0f, 5.5f, -4.0f },
+            {  4.0f, 5.0f, 5.0f },
+            {  0.0f, 6.0f, 6.0f }
+        };
+
+        for (float[] pos : cloudPositions) {
+            drawCloudCluster(gl, glu, quadric, pos[0], pos[1], pos[2]);
+        }
+
+        gl.glDisable(GL2.GL_BLEND);
+        gl.glPopMatrix();
+        glu.gluDeleteQuadric(quadric);
+    }
+
+    private void drawCloudCluster(GL2 gl, GLU glu, GLUquadric quadric, float cx, float cy, float cz) {
+        float[] offsets = {
+            -0.5f, 0f, 0f,
+             0.5f, 0f, 0f,
+             0f, 0f, -0.5f,
+             0f, 0f, 0.5f,
+             0f, 0.3f, 0f
+        };
+
+        for (int i = 0; i < offsets.length; i += 3) {
+            gl.glPushMatrix();
+            gl.glTranslatef(cx + offsets[i], cy + offsets[i + 1], cz + offsets[i + 2]);
+            glu.gluSphere(quadric, 0.5f, 16, 16);
+            gl.glPopMatrix();
+        }
+    }
+
     
     @Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
