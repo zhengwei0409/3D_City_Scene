@@ -117,6 +117,9 @@ public class CityScene implements GLEventListener, KeyListener {
             // Draw clouds
             drawClouds(gl);
 
+            // Draw sun
+            drawSun(gl);
+            
             // Draw other elements
             drawCars(gl);
             drawStreetLights(gl);
@@ -949,7 +952,41 @@ public class CityScene implements GLEventListener, KeyListener {
             gl.glPopMatrix();
         }
     }
+    
+    private void drawSun(GL2 gl) {
+        gl.glPushMatrix();
+        gl.glTranslatef(7.0f, 10.0f, -7.0f);
+        
+        // Enable lighting for the sun
+        gl.glEnable(GL2.GL_LIGHTING);
+        gl.glEnable(GL2.GL_LIGHT1);
 
+        // Sun properties (bright yellow light)
+        float[] sunLightPos = {0.0f, 0.0f, 0.0f, 1.0f};
+        float[] sunLightColor = {1.0f, 0.9f, 0.7f, 1.0f};
+        float[] sunAmbient = {0.3f, 0.3f, 0.2f, 1.0f};
+
+        gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, sunLightPos, 0);
+        gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_DIFFUSE, sunLightColor, 0);
+        gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_AMBIENT, sunAmbient, 0);
+
+        // Sun appearance (glowing yellow sphere)
+        gl.glDisable(GL2.GL_LIGHTING); // We want the sun to appear self-lit
+        gl.glColor3f(1.0f, 0.9f, 0.1f);
+
+        // Main sun sphere
+        drawSphere(gl, 1.0f);
+
+        // Corona effect (slightly larger transparent sphere)
+        gl.glEnable(GL2.GL_BLEND);
+        gl.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
+        gl.glColor4f(1.0f, 0.7f, 0.1f, 0.3f);
+        drawSphere(gl, 1.2f);
+        gl.glDisable(GL2.GL_BLEND);
+        
+        gl.glEnable(GL2.GL_LIGHTING);
+        gl.glPopMatrix();
+    }
     
     @Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
