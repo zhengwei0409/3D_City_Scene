@@ -33,6 +33,21 @@ public class CityScene implements GLEventListener, KeyListener {
     private static final float ROAD_WIDTH = 1.5f;
     private static final float SPACING = BUILDING_SIZE + ROAD_WIDTH;
     
+    // Road properties
+    private static final float Y_LEVEL = 0.01f; // Y-coordinate for the road surface
+    private static final float MARKING_Y_LEVEL = 0.02f; // Y-coordinate for markings (slightly above road)
+    
+    // EXTENT defines the outermost surface of the road grid
+    private static final float EXTENT = 10.0f;
+
+    // Where markings are drawn. Original code used -8.0f to 8.0f.
+    private static final float MARKING_RANGE_START = -8.0f;
+    private static final float MARKING_RANGE_END = 8.0f;
+
+    private static final float DASH_LENGTH = 0.5f;
+    private static final float MARKING_STEP = 1.0f; // Combined length of a dash and a gap
+    private static final float MARKING_OFFSET_FROM_CENTER = 0.1f; // Offset for parallel marking lines from road arm centerline
+    
     private float trafficLightTimer = 0.0f;
     private int currentLight = 0; // 0=red, 1=yellow, 2=green
     
@@ -623,56 +638,140 @@ public class CityScene implements GLEventListener, KeyListener {
     drawTrafficLight(gl, -1.0f, 0.0f, 1.0f);   // Southwest intersection
     drawTrafficLight(gl, 1.0f, 0.0f, 1.0f);    // Southeast intersection
 }
-    
+
+    private void drawRoadQuad(GL2 gl, float x1, float z1, float x2, float z2, float x3, float z3, float x4, float z4) {
+        gl.glBegin(GL2.GL_QUADS);
+        gl.glVertex3f(x1, Y_LEVEL, z1);
+        gl.glVertex3f(x2, Y_LEVEL, z2);
+        gl.glVertex3f(x3, Y_LEVEL, z3);
+        gl.glVertex3f(x4, Y_LEVEL, z4);
+        gl.glEnd();
+    }
+
     private void drawRoads(GL2 gl) {
         gl.glColor3f(0.3f, 0.3f, 0.3f); // Dark gray roads
-        
-        // Horizontal road
-        gl.glBegin(GL2.GL_QUADS);
         gl.glNormal3f(0.0f, 1.0f, 0.0f);
-        gl.glVertex3f(-10.0f, 0.01f, -ROAD_WIDTH/2);
-        gl.glVertex3f(10.0f, 0.01f, -ROAD_WIDTH/2);
-        gl.glVertex3f(10.0f, 0.01f, ROAD_WIDTH/2);
-        gl.glVertex3f(-10.0f, 0.01f, ROAD_WIDTH/2);
-        gl.glEnd();
-        
-        // Vertical road
-        gl.glBegin(GL2.GL_QUADS);
-        gl.glNormal3f(0.0f, 1.0f, 0.0f);
-        gl.glVertex3f(-ROAD_WIDTH/2, 0.01f, -10.0f);
-        gl.glVertex3f(ROAD_WIDTH/2, 0.01f, -10.0f);
-        gl.glVertex3f(ROAD_WIDTH/2, 0.01f, 10.0f);
-        gl.glVertex3f(-ROAD_WIDTH/2, 0.01f, 10.0f);
-        gl.glEnd();
-        
-        // Road markings
+
+        final float RWH = ROAD_WIDTH / 2.0f;
+        final float C = EXTENT - RWH;
+
+        // Center (cx, cz) coordinates for intersections:
+        float[][] centers = {
+                {0, 0},    // 0: Center
+                {0, C},    // 1: Top-Mid
+                {0, -C},   // 2: Bot-Mid
+                {-C, 0},   // 3: Left-Mid
+                {C, 0},    // 4: Right-Mid
+                {-C, C},   // 5: Top-Left
+                {C, C},    // 6: Top-Right
+                {-C, -C},  // 7: Bot-Left
+                {C, -C}    // 8: Bot-Right
+        };
+
+        for (float[] center : centers) {
+            float cx = center[0];
+            float cz = center[1];
+            drawRoadQuad(gl,
+                    cx - RWH, cz - RWH, // bottom-left
+                    cx + RWH, cz - RWH, // bottom-right
+                    cx + RWH, cz + RWH, // top-right
+                    cx - RWH, cz + RWH  // top-left
+            );
+        }
+
+        //Draw 12 Road Segments connecting intersections ---
+        drawRoadQuad(gl, -RWH, RWH, RWH, RWH, RWH, C - RWH, -RWH, C - RWH);
+        drawRoadQuad(gl, -RWH, -C + RWH, RWH, -C + RWH, RWH, -RWH, -RWH, -RWH);
+        drawRoadQuad(gl, -C + RWH, -RWH, -RWH, -RWH, -RWH, RWH, -C + RWH, RWH);
+        drawRoadQuad(gl, RWH, -RWH, C - RWH, -RWH, C - RWH, RWH, RWH, RWH);
+
+        // Segments from Mid-T-junctions to Corners (Outer frame segments)
+        drawRoadQuad(gl, -C + RWH, C - RWH, -RWH, C - RWH, -RWH, C + RWH, -C + RWH, C + RWH);
+        drawRoadQuad(gl, RWH, C - RWH, C - RWH, C - RWH, C - RWH, C + RWH, RWH, C + RWH);
+        drawRoadQuad(gl, -C + RWH, -C - RWH, -RWH, -C - RWH, -RWH, -C + RWH, -C + RWH, -C + RWH);
+        drawRoadQuad(gl, RWH, -C - RWH, C - RWH, -C - RWH, C - RWH, -C + RWH, RWH, -C + RWH);
+        drawRoadQuad(gl, -C - RWH, RWH, -C + RWH, RWH, -C + RWH, C - RWH, -C - RWH, C - RWH);
+        drawRoadQuad(gl, -C - RWH, -C + RWH, -C + RWH, -C + RWH, -C + RWH, -RWH, -C - RWH, -RWH);
+        drawRoadQuad(gl, C + RWH, RWH, C - RWH, RWH, C - RWH, C - RWH, C + RWH, C - RWH);
+        drawRoadQuad(gl, C - RWH, RWH,     C + RWH, RWH,      C + RWH, C - RWH, C - RWH, C - RWH);
+        drawRoadQuad(gl, C - RWH, -C + RWH, C + RWH, -C + RWH, C + RWH, -RWH,    C - RWH, -RWH);
+
         gl.glColor3f(1.0f, 1.0f, 0.0f); // Yellow lines
         drawRoadMarkings(gl);
     }
-    
+
+    private void drawMarkingsOnSegment(GL2 gl, float x_bl, float z_bl, float x_tr, float z_tr, boolean isHorizontal) {
+
+    if (isHorizontal) {
+        float segment_center_z = (z_bl + z_tr) / 2.0f;
+
+        // Calculate z-coordinates for the two parallel marking lines
+        float z_marking_line1 = segment_center_z - MARKING_OFFSET_FROM_CENTER;
+        float z_marking_line2 = segment_center_z + MARKING_OFFSET_FROM_CENTER;
+
+        // Iterate along the x-axis of the segment
+        for (float x = x_bl; x <= x_tr - DASH_LENGTH; x += MARKING_STEP) {
+            if (!(x + DASH_LENGTH >= MARKING_RANGE_START && x <= MARKING_RANGE_END)) {
+                continue;
+            }
+
+            // Draw first dashed line
+            gl.glVertex3f(x, MARKING_Y_LEVEL, z_marking_line1);
+            gl.glVertex3f(x + DASH_LENGTH, MARKING_Y_LEVEL, z_marking_line1);
+
+            // Draw second dashed line
+            gl.glVertex3f(x, MARKING_Y_LEVEL, z_marking_line2);
+            gl.glVertex3f(x + DASH_LENGTH, MARKING_Y_LEVEL, z_marking_line2);
+        }
+    } else {
+        float segment_center_x = (x_bl + x_tr) / 2.0f;
+
+        float x_marking_line1 = segment_center_x - MARKING_OFFSET_FROM_CENTER;
+        float x_marking_line2 = segment_center_x + MARKING_OFFSET_FROM_CENTER;
+
+        for (float z = z_bl; z <= z_tr - DASH_LENGTH; z += MARKING_STEP) {
+            if (!(z + DASH_LENGTH >= MARKING_RANGE_START && z <= MARKING_RANGE_END)) {
+                continue;
+            }
+
+            // Draw first dashed line
+            gl.glVertex3f(x_marking_line1, MARKING_Y_LEVEL, z);
+            gl.glVertex3f(x_marking_line1, MARKING_Y_LEVEL, z + DASH_LENGTH);
+
+            // Draw second dashed line
+            gl.glVertex3f(x_marking_line2, MARKING_Y_LEVEL, z);
+            gl.glVertex3f(x_marking_line2, MARKING_Y_LEVEL, z + DASH_LENGTH);
+        }
+    }
+}
+
+
     private void drawRoadMarkings(GL2 gl) {
         gl.glLineWidth(3.0f);
         gl.glBegin(GL.GL_LINES);
-        
-        // Horizontal road markings
-        for (float x = -8.0f; x <= 8.0f; x += 1.0f) {
-            gl.glVertex3f(x, 0.02f, -0.1f);
-            gl.glVertex3f(x + 0.5f, 0.02f, -0.1f);
-            gl.glVertex3f(x, 0.02f, 0.1f);
-            gl.glVertex3f(x + 0.5f, 0.02f, 0.1f);
-        }
-        
-        // Vertical road markings
-        for (float z = -8.0f; z <= 8.0f; z += 1.0f) {
-            gl.glVertex3f(-0.1f, 0.02f, z);
-            gl.glVertex3f(-0.1f, 0.02f, z + 0.5f);
-            gl.glVertex3f(0.1f, 0.02f, z);
-            gl.glVertex3f(0.1f, 0.02f, z + 0.5f);
-        }
-        
+
+        final float RWH = ROAD_WIDTH / 2.0f;
+        final float C = EXTENT - RWH;
+
+
+        // Segments from Center to Mid-T-junctions
+        drawMarkingsOnSegment(gl, -RWH, RWH, RWH, C - RWH, false);
+        drawMarkingsOnSegment(gl, -RWH, -C + RWH, RWH, -RWH, false);
+        drawMarkingsOnSegment(gl, -C + RWH, -RWH, -RWH, RWH, true);
+        drawMarkingsOnSegment(gl, RWH, -RWH, C - RWH, RWH, true);
+
+        // Segments from Mid-T-junctions to Corners (Outer frame segments)
+        drawMarkingsOnSegment(gl, -C + RWH, C - RWH, -RWH, C + RWH, true);
+        drawMarkingsOnSegment(gl, RWH, C - RWH, C - RWH, C + RWH, true);
+        drawMarkingsOnSegment(gl, -C + RWH, -C - RWH, -RWH, -C + RWH, true);
+        drawMarkingsOnSegment(gl, RWH, -C - RWH, C - RWH, -C + RWH, true);
+        drawMarkingsOnSegment(gl, -C - RWH, RWH, -C + RWH, C - RWH, false);
+        drawMarkingsOnSegment(gl, -C - RWH, -C + RWH, -C + RWH, -RWH, false);
+        drawMarkingsOnSegment(gl, C - RWH, RWH, C + RWH, C - RWH, false);
+        drawMarkingsOnSegment(gl, C - RWH, -C + RWH, C + RWH, -RWH, false);
+
         gl.glEnd();
-    }
-    
+    }    
     
     private void drawBuildingBody(GL2 gl, float width, float height, float depth) {
         gl.glBegin(GL2.GL_QUADS);
