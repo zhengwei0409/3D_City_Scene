@@ -907,23 +907,141 @@ public class CityScene implements GLEventListener, KeyListener {
     }
     
     
-    private void drawCars(GL2 gl) {
-        // Simple cars on roads
-        drawCar(gl, -2.0f, 0.0f, 0.2f, 1.0f, 0.0f, 0.0f); // Red car
-        drawCar(gl, 2.0f, 0.0f, -0.2f, 0.0f, 0.0f, 1.0f); // Blue car
-        drawCar(gl, 0.2f, 0.0f, -2.0f, 0.0f, 1.0f, 0.0f); // Green car
+    private void drawCylinder(GL2 gl, float radius, float height, int slices, int stacks) {
+        double da = 2.0 * Math.PI / slices;
+        double dh = height / stacks;
+        double dz = -height / 2.0;
+
+        // Draw side an
+        gl.glBegin(GL2.GL_QUAD_STRIP);
+        for (int j = 0; j <= slices; j++) {
+            double angle = (j == slices) ? 0.0 : j * da; // Wrap around for last slice
+            float x = (float) (radius * Math.cos(angle));
+            float y = (float) (radius * Math.sin(angle));
+            gl.glNormal3f(x / radius, y / radius, 0.0f); // Normal for side
+            gl.glVertex3f(x, y, (float) dz);             // Bottom edge of strip
+            gl.glVertex3f(x, y, (float) (dz + height));  // Top edge of strip (or use stacks)
+                                                       // Simplified for stacks=1 for wheels
+        }
+        gl.glEnd();
+
+        // Draw Top Cap (at z = height/2)
+        gl.glBegin(GL2.GL_TRIANGLE_FAN);
+        gl.glNormal3f(0.0f, 0.0f, 1.0f);
+        gl.glVertex3f(0.0f, 0.0f, height / 2.0f); // Center of fan
+        for (int i = 0; i <= slices; i++) {
+            double angle = (i == slices) ? 0.0 : i * da;
+            gl.glVertex3f((float) (radius * Math.cos(angle)),
+                          (float) (radius * Math.sin(angle)),
+                          height / 2.0f);
+        }
+        gl.glEnd();
+
+        // Draw Bottom Cap (at z = -height/2)
+        gl.glBegin(GL2.GL_TRIANGLE_FAN);
+        gl.glNormal3f(0.0f, 0.0f, -1.0f);
+        gl.glVertex3f(0.0f, 0.0f, -height / 2.0f); // Center of fan
+        for (int i = slices; i >= 0; i--) { // Iterate in reverse for correct winding
+            double angle = (i == slices) ? 0.0 : i * da;
+            gl.glVertex3f((float) (radius * Math.cos(angle)),
+                          (float) (radius * Math.sin(angle)),
+                          -height / 2.0f);
+        }
+        gl.glEnd();
     }
-    
+
+
+    private void drawCars(GL2 gl) {
+        // Cars are now smaller
+        drawCar(gl, -1.2f, 0.0f, 0.1f, 1.0f, 0.0f, 0.0f); // Red car, adjusted position
+        drawCar(gl, 1.2f, 0.0f, -0.1f, 0.0f, 0.0f, 1.0f); // Blue car, adjusted position
+        drawCar(gl, 0.1f, 0.0f, -1.2f, 0.0f, 1.0f, 0.0f); // Green car, adjusted position
+    }
+
     private void drawCar(GL2 gl, float x, float y, float z, float r, float g, float b) {
+        // --- Smaller Car Dimensions ---
+        float scaleFactor = 0.6f; // Factor to make the car smaller
+
+        float chassisWidth = 0.8f * scaleFactor;
+        float chassisHeight = 0.3f * scaleFactor;
+        float chassisLength = 1.6f * scaleFactor;
+
+        float cabinWidth = chassisWidth * 0.85f;
+        float cabinHeight = 0.4f * scaleFactor;
+        float cabinLength = chassisLength * 0.5f;
+
+        float wheelRadius = 0.20f * scaleFactor;
+        float wheelThickness = 0.1f * scaleFactor;
+        // float wheelDiameter = wheelRadius * 2.0f; // Not directly used for cylinder scale
+
+        gl.glPushMatrix(); // Save current world matrix
+
+        gl.glTranslatef(x, y + wheelRadius, z); // Position car: y is ground, lift by wheelRadius for axle
+
+        // --- 1. Draw Chassis ---
+        float chassisYOffset = chassisHeight * 0.3f;
         gl.glPushMatrix();
-        gl.glTranslatef(x, y + 0.1f, z);
         gl.glColor3f(r, g, b);
-        
-        // Car body
-        gl.glScalef(0.4f, 0.2f, 0.8f);
-        drawCube(gl);
-        
+        gl.glTranslatef(0.0f, chassisYOffset, 0.0f);
+        gl.glScalef(chassisWidth, chassisHeight, chassisLength);
+        drawCube(gl); // Assumes drawCube() draws a 1x1x1 cube centered at origin
         gl.glPopMatrix();
+
+        // --- 2. Draw Cabin ---
+        gl.glPushMatrix();
+        gl.glColor3f(r * 0.9f, g * 0.9f, b * 0.9f);
+        float cabinCenterY = (chassisYOffset + chassisHeight / 2.0f) + (cabinHeight / 2.0f);
+        float cabinZOffset = -chassisLength * 0.15f;
+        gl.glTranslatef(0.0f, cabinCenterY, cabinZOffset);
+        gl.glScalef(cabinWidth, cabinHeight, cabinLength);
+        drawCube(gl);
+        gl.glPopMatrix();
+
+        // --- 3. Draw Wheels (now as Cylinders) ---
+        gl.glColor3f(0.1f, 0.1f, 0.1f); // Dark grey/black for wheels
+
+        float wheelLocalYPos = 0.0f; // Wheel centers are at the car's local y=0 (axle height)
+        float wheelFrontZ = chassisLength * 0.38f;
+        float wheelRearZ = -chassisLength * 0.38f;
+        float wheelXOffset = chassisWidth / 2.0f + wheelThickness / 2.0f - (0.02f * scaleFactor); // Adjusted inset
+
+        int wheelSlices = 16; // Number of sides for the cylinder to approximate a circle
+
+        // Common setup for each wheel
+        Runnable drawWheelsCode = () -> {
+            // Wheel 1: Front-Right
+            gl.glPushMatrix();
+            gl.glTranslatef(wheelXOffset, wheelLocalYPos, wheelFrontZ);
+            gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f); // Rotate cylinder to align correctly
+                                                  // (cylinder Z-axis becomes wheel axle along X-axis)
+            drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
+            gl.glPopMatrix();
+
+            // Wheel 2: Front-Left
+            gl.glPushMatrix();
+            gl.glTranslatef(-wheelXOffset, wheelLocalYPos, wheelFrontZ);
+            gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+            drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
+            gl.glPopMatrix();
+
+            // Wheel 3: Rear-Right
+            gl.glPushMatrix();
+            gl.glTranslatef(wheelXOffset, wheelLocalYPos, wheelRearZ);
+            gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+            drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
+            gl.glPopMatrix();
+
+            // Wheel 4: Rear-Left
+            gl.glPushMatrix();
+            gl.glTranslatef(-wheelXOffset, wheelLocalYPos, wheelRearZ);
+            gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+            drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
+            gl.glPopMatrix();
+        };
+
+        drawWheelsCode.run(); // Execute the wheel drawing
+
+        gl.glPopMatrix(); // Restore original world matrix
     }
     
     private void drawCube(GL2 gl) {
