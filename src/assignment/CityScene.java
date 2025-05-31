@@ -489,56 +489,192 @@ public class CityScene implements GLEventListener, KeyListener {
         }
     }
 
-    private void drawTwinTowers(GL2 gl, float x, float y, float z) {
-        float towerHeight = 8.0f;
-        int segments = 5; // number of truncated cones stacked
-        float baseRadius = 0.6f; // largest radius at bottom
-        float topRadius = 0.15f; // smallest radius at top
-        float spacing = 1.5f;
+    private void drawTruncatedCone(GL2 gl, float baseRadius, float topRadius, float height, int slices) {
+        float da = 2.0f * (float)Math.PI / slices;
 
-        float segmentHeight = towerHeight / segments;
-        float radiusStep = (baseRadius - topRadius) / segments;
-        
-        float greyR = 0.6f;
-        float greyG = 0.6f;
-        float greyB = 0.6f;
+        // Sides
+        gl.glBegin(GL2.GL_QUAD_STRIP);
+        for (int j = 0; j <= slices; j++) {
+            float angle = (j == slices) ? 0.0f : j * da; // Wrap around for last slice
+            float cosAng = (float)Math.cos(angle);
+            float sinAng = (float)Math.sin(angle);
 
-        // Draw left tower with stacked truncated cones
-        gl.glPushMatrix();
-        gl.glTranslatef(x - spacing / 2, y, z);
-        gl.glRotatef(-90f, 1f, 0f, 0f); 
-        gl.glColor3f(greyR, greyG, greyB);
+            // Calculate normal for the side surface
+            float nx = height * cosAng;
+            float ny = height * sinAng;
+            float nz = baseRadius - topRadius; //  Points "outward" correctly from the slope
+            float length = (float)Math.sqrt(nx*nx + ny*ny + nz*nz);
+            if (length > 1e-6f) { // Avoid division by zero if height=0 and radii are same (though unlikely for cone)
+                gl.glNormal3f(nx/length, ny/length, nz/length);
+            } else { // Fallback for a degenerate case (e.g. flat disk) or simple cylinder
+                 gl.glNormal3f(cosAng,sinAng,0.0f);
+            }
 
-        for (int i = 0; i < segments; i++) {
-            float currentBaseRadius = baseRadius - i * radiusStep;
-            float currentTopRadius = baseRadius - (i + 1) * radiusStep;
-            drawCylinder(gl, currentBaseRadius, currentTopRadius, segmentHeight);
-            gl.glTranslatef(0, 0, segmentHeight); 
+            gl.glVertex3f(topRadius * cosAng, topRadius * sinAng, height / 2.0f);   // Top vertex
+            gl.glVertex3f(baseRadius * cosAng, baseRadius * sinAng, -height / 2.0f); // Bottom vertex
         }
-        gl.glPopMatrix();
+        gl.glEnd();
 
-        // Draw right tower with stacked truncated cones
-        gl.glPushMatrix();
-        gl.glTranslatef(x + spacing / 2, y, z);
-        gl.glRotatef(-90f, 1f, 0f, 0f);
-        gl.glColor3f(greyR, greyG, greyB);
-
-        for (int i = 0; i < segments; i++) {
-            float currentBaseRadius = baseRadius - i * radiusStep;
-            float currentTopRadius = baseRadius - (i + 1) * radiusStep;
-            drawCylinder(gl, currentBaseRadius, currentTopRadius, segmentHeight);
-            gl.glTranslatef(0, 0, segmentHeight);
+        // Top Cap
+        gl.glBegin(GL2.GL_TRIANGLE_FAN);
+        gl.glNormal3f(0.0f, 0.0f, 1.0f);
+        gl.glVertex3f(0.0f, 0.0f, height / 2.0f); // Center
+        for (int i = 0; i <= slices; i++) {
+            float angle = (i == slices) ? 0.0f : i * da;
+            gl.glVertex3f(topRadius * (float)Math.cos(angle), topRadius * (float)Math.sin(angle), height / 2.0f);
         }
-        gl.glPopMatrix();
+        gl.glEnd();
 
-        // Draw skybridge
-        gl.glPushMatrix();
-        gl.glTranslatef(x, y + towerHeight * 0.5f, z);
-        gl.glScalef(spacing, 0.1f, 0.3f);
-        gl.glColor3f(0.6f, 0.6f, 0.6f);
-        drawCube(gl);
-        gl.glPopMatrix();
+        // Bottom Cap
+        gl.glBegin(GL2.GL_TRIANGLE_FAN);
+        gl.glNormal3f(0.0f, 0.0f, -1.0f);
+        gl.glVertex3f(0.0f, 0.0f, -height / 2.0f); // Center
+        for (int i = slices; i >= 0; i--) { // Iterate in reverse for correct face orientation
+            float angle = (i == 0 && slices != 0) ? 0.0f : i * da; // Ensure angle=0 for the last point if i=0
+            gl.glVertex3f(baseRadius * (float)Math.cos(angle), baseRadius * (float)Math.sin(angle), -height / 2.0f);
+        }
+        gl.glEnd();
     }
+
+
+    private void drawTwinTowers(GL2 gl, float x, float y, float z) {
+    // --- Parameters for Tower Dimensions ---
+    float towerBodyHeight = 10.0f; // Main structure height (remains the same)
+    int segments = 6;             // Number of stacked sections for the main body
+
+    // --- REDUCED WIDTH PARAMETERS ---
+    float radiusReductionFactor = 0.75f; // Reduce radii by 25%
+    float baseRadius = 1.2f * radiusReductionFactor;      // New: 0.9f
+    float topBodyRadius = 0.7f * radiusReductionFactor;   // New: 0.525f
+
+    // Spacing between tower centers (remains the same for now)
+    float spacing = 3.5f;
+
+    // Pinnacle dimensions (also scaled in width)
+    float pinnacleBaseRadius = topBodyRadius * 0.9f; // Proportionate to topBodyRadius
+    float pinnacleBaseHeight = 0.8f; // Height remains
+    float spireRadius = Math.max(0.1f, 0.15f * radiusReductionFactor); // New: ~0.1125f, ensure not too thin
+    float spireHeight = 6.0f;     // Height remains
+
+    // Calculated values
+    float segmentHeight = towerBodyHeight / segments;
+    float radiusStep = (baseRadius - topBodyRadius) / segments;
+
+    // Color and slices
+    float greyR = 0.55f;
+    float greyG = 0.58f;
+    float greyB = 0.6f;
+    int towerSlices = 24; // Keep smoothness
+
+    // Loop for two towers (left and right)
+    for (int towerIdx = 0; towerIdx < 2; towerIdx++) {
+        gl.glPushMatrix();
+        float towerX = x + (towerIdx == 0 ? -spacing / 2 : spacing / 2);
+        gl.glTranslatef(towerX, y, z);
+        gl.glRotatef(-90f, 1f, 0f, 0f);
+
+        gl.glColor3f(greyR, greyG, greyB);
+
+        // --- Draw Main Tower Body ---
+        gl.glTranslatef(0, 0, segmentHeight / 2.0f);
+
+        for (int i = 0; i < segments; i++) {
+            float currentBaseRadius = baseRadius - i * radiusStep;
+            float currentTopRadius = baseRadius - (i + 1) * radiusStep;
+            // Ensure top radius doesn't go below a minimum for aesthetics during tapering
+            currentTopRadius = Math.max(currentTopRadius, topBodyRadius * 0.8f); // Prevent overly sharp taper mid-body
+            if (i == segments -1) currentTopRadius = topBodyRadius; // Final segment top matches definition
+
+            drawTruncatedCone(gl, currentBaseRadius, currentTopRadius, segmentHeight, towerSlices);
+            if (i < segments - 1) {
+                gl.glTranslatef(0, 0, segmentHeight);
+            }
+        }
+        gl.glTranslatef(0, 0, segmentHeight / 2.0f); // Move to top surface of main body
+
+        // --- Draw Pinnacle ---
+        // 1. Pinnacle Base
+        gl.glColor3f(greyR * 0.9f, greyG * 0.9f, greyB * 0.9f);
+        gl.glTranslatef(0, 0, pinnacleBaseHeight / 2.0f);
+        drawTruncatedCone(gl, pinnacleBaseRadius, pinnacleBaseRadius * 0.7f, pinnacleBaseHeight, towerSlices);
+        gl.glTranslatef(0, 0, pinnacleBaseHeight / 2.0f);
+
+        // 2. Spire
+        gl.glColor3f(greyR * 0.8f, greyG * 0.8f, greyB * 0.8f);
+        gl.glTranslatef(0, 0, spireHeight / 2.0f);
+        drawTruncatedCone(gl, spireRadius, spireRadius * 0.3f, spireHeight, towerSlices/2);
+
+        gl.glPopMatrix(); // End of this tower's transformations
+    }
+
+    // --- Draw Skybridge ---
+    // Skybridge dimensions mostly unchanged unless they look out of proportion
+    float bridgeLevel = towerBodyHeight * 0.47f;
+    float bridgeHeight = 0.4f; // Kept same
+    float bridgeDepth = 0.5f;  // Kept same
+
+    gl.glPushMatrix();
+    gl.glTranslatef(x, y + bridgeLevel, z);
+    gl.glColor3f(greyR * 0.8f, greyG * 0.8f, greyB * 0.8f);
+
+    // Main bridge structure
+    gl.glPushMatrix();
+    gl.glScalef(spacing * 0.95f, bridgeHeight, bridgeDepth);
+    drawCube(gl);
+    gl.glPopMatrix();
+
+    // Simplified V-supports/diagonal braces
+    float supportLength = bridgeLevel * 0.3f;
+    float supportThickness = 0.1f; // Kept same
+    float supportAngle = 35.0f;
+
+    // Estimate tower radius at bridge level for more accurate support placement start
+    // This is an approximation as the taper isn't linear if Math.max was hit often.
+    float segmentsAtBridgeLevel = bridgeLevel / segmentHeight;
+    float estimatedRadiusAtBridge = baseRadius - segmentsAtBridgeLevel * radiusStep;
+    estimatedRadiusAtBridge = Math.max(estimatedRadiusAtBridge, topBodyRadius); // Ensure it's not less than the top body radius
+
+
+    // Left Tower Supports
+    gl.glPushMatrix();
+    gl.glTranslatef(-spacing/2 + estimatedRadiusAtBridge*0.7f , -bridgeHeight/2 - 0.1f, 0);
+    gl.glRotatef(supportAngle, 0,0,1);
+    gl.glRotatef(10, 1,0,0);
+    gl.glTranslatef(0, -supportLength/2, 0);
+    gl.glScalef(supportThickness, supportLength, supportThickness);
+    drawCube(gl);
+    gl.glPopMatrix();
+
+    gl.glPushMatrix();
+    gl.glTranslatef(-spacing/2 + estimatedRadiusAtBridge*0.7f , -bridgeHeight/2 - 0.1f, 0);
+    gl.glRotatef(-supportAngle, 0,0,1);
+    gl.glRotatef(10, 1,0,0);
+    gl.glTranslatef(0, -supportLength/2, 0);
+    gl.glScalef(supportThickness, supportLength, supportThickness);
+    drawCube(gl);
+    gl.glPopMatrix();
+
+    // Right Tower Supports
+    gl.glPushMatrix();
+    gl.glTranslatef(spacing/2 - estimatedRadiusAtBridge*0.7f , -bridgeHeight/2 - 0.1f, 0);
+    gl.glRotatef(supportAngle, 0,0,1);
+    gl.glRotatef(-10, 1,0,0);
+    gl.glTranslatef(0, -supportLength/2, 0);
+    gl.glScalef(supportThickness, supportLength, supportThickness);
+    drawCube(gl);
+    gl.glPopMatrix();
+
+    gl.glPushMatrix();
+    gl.glTranslatef(spacing/2 - estimatedRadiusAtBridge*0.7f , -bridgeHeight/2 - 0.1f, 0);
+    gl.glRotatef(-supportAngle, 0,0,1);
+    gl.glRotatef(-10, 1,0,0);
+    gl.glTranslatef(0, -supportLength/2, 0);
+    gl.glScalef(supportThickness, supportLength, supportThickness);
+    drawCube(gl);
+    gl.glPopMatrix();
+
+    gl.glPopMatrix(); // End of skybridge transformations
+}
 
     private void drawCylinder(GL2 gl, float baseRadius, float topRadius, float height) {
         GLU glu = GLU.createGLU();
@@ -959,90 +1095,141 @@ public class CityScene implements GLEventListener, KeyListener {
     }
 
     private void drawCar(GL2 gl, float x, float y, float z, float r, float g, float b) {
-        // --- Smaller Car Dimensions ---
-        float scaleFactor = 0.6f; // Factor to make the car smaller
+    // --- Smaller Car Dimensions ---
+    float scaleFactor = 0.6f; // Factor to make the car smaller
 
-        float chassisWidth = 0.8f * scaleFactor;
-        float chassisHeight = 0.3f * scaleFactor;
-        float chassisLength = 1.6f * scaleFactor;
+    float chassisWidth = 0.8f * scaleFactor;
+    float chassisHeight = 0.3f * scaleFactor;
+    float chassisLength = 1.6f * scaleFactor;
 
-        float cabinWidth = chassisWidth * 0.85f;
-        float cabinHeight = 0.4f * scaleFactor;
-        float cabinLength = chassisLength * 0.5f;
+    float cabinWidth = chassisWidth * 0.85f;
+    float cabinHeight = 0.4f * scaleFactor;
+    float cabinLength = chassisLength * 0.5f;
 
-        float wheelRadius = 0.20f * scaleFactor;
-        float wheelThickness = 0.1f * scaleFactor;
-        // float wheelDiameter = wheelRadius * 2.0f; // Not directly used for cylinder scale
+    float wheelRadius = 0.20f * scaleFactor;
+    float wheelThickness = 0.1f * scaleFactor;
 
-        gl.glPushMatrix(); // Save current world matrix
+    gl.glPushMatrix(); // Save current world matrix
+    gl.glTranslatef(x, y + wheelRadius, z); // Position car: y is ground, lift by wheelRadius for axle
 
-        gl.glTranslatef(x, y + wheelRadius, z); // Position car: y is ground, lift by wheelRadius for axle
+    // --- 1. Draw Chassis ---
+    float chassisYOffset = chassisHeight * 0.3f;
+    gl.glPushMatrix();
+    gl.glColor3f(r, g, b);
+    gl.glTranslatef(0.0f, chassisYOffset, 0.0f);
+    gl.glScalef(chassisWidth, chassisHeight, chassisLength);
+    drawCube(gl);
+    gl.glPopMatrix();
 
-        // --- 1. Draw Chassis ---
-        float chassisYOffset = chassisHeight * 0.3f;
-        gl.glPushMatrix();
-        gl.glColor3f(r, g, b);
-        gl.glTranslatef(0.0f, chassisYOffset, 0.0f);
-        gl.glScalef(chassisWidth, chassisHeight, chassisLength);
-        drawCube(gl); // Assumes drawCube() draws a 1x1x1 cube centered at origin
-        gl.glPopMatrix();
+    // --- 2. Draw Cabin ---
+    // Calculate cabin's actual center position in car's local space
+    float cabinActualY = (chassisYOffset + chassisHeight / 2.0f) + (cabinHeight / 2.0f);
+    float cabinActualZ = -chassisLength * 0.15f;
 
-        // --- 2. Draw Cabin ---
-        gl.glPushMatrix();
-        gl.glColor3f(r * 0.9f, g * 0.9f, b * 0.9f);
-        float cabinCenterY = (chassisYOffset + chassisHeight / 2.0f) + (cabinHeight / 2.0f);
-        float cabinZOffset = -chassisLength * 0.15f;
-        gl.glTranslatef(0.0f, cabinCenterY, cabinZOffset);
-        gl.glScalef(cabinWidth, cabinHeight, cabinLength);
-        drawCube(gl);
-        gl.glPopMatrix();
+    gl.glPushMatrix(); // Cabin's main transformation block
+    gl.glColor3f(r * 0.9f, g * 0.9f, b * 0.9f); // Cabin color
+    gl.glTranslatef(0.0f, cabinActualY, cabinActualZ); // Translate to cabin's designated center
+    gl.glScalef(cabinWidth, cabinHeight, cabinLength); // Scale the unit cube to cabin dimensions
+    drawCube(gl); // Draw the main cabin block
+    gl.glPopMatrix(); // End of Cabin's main block
 
-        // --- 3. Draw Wheels (now as Cylinders) ---
-        gl.glColor3f(0.1f, 0.1f, 0.1f); // Dark grey/black for wheels
 
-        float wheelLocalYPos = 0.0f; // Wheel centers are at the car's local y=0 (axle height)
-        float wheelFrontZ = chassisLength * 0.38f;
-        float wheelRearZ = -chassisLength * 0.38f;
-        float wheelXOffset = chassisWidth / 2.0f + wheelThickness / 2.0f - (0.02f * scaleFactor); // Adjusted inset
+    // --- 2a. Draw Windows ---
+    // Windows are drawn relative to the cabin's center.
+    // Cabin's center in car space is (0, cabinActualY, cabinActualZ).
+    // Cabin dimensions are cabinWidth, cabinHeight, cabinLength.
 
-        int wheelSlices = 16; // Number of sides for the cylinder to approximate a circle
+    gl.glColor3f(0.6f, 0.8f, 1.0f); // Light blue for windows (r, g, b)
 
-        // Common setup for each wheel
-        Runnable drawWheelsCode = () -> {
-            // Wheel 1: Front-Right
-            gl.glPushMatrix();
-            gl.glTranslatef(wheelXOffset, wheelLocalYPos, wheelFrontZ);
-            gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f); // Rotate cylinder to align correctly
-                                                  // (cylinder Z-axis becomes wheel axle along X-axis)
-            drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
-            gl.glPopMatrix();
+    float windowPanelThickness = 0.015f * scaleFactor; // Make it very thin
+    float epsilonOffset = 0.005f; // Tiny offset to prevent Z-fighting, pushing windows slightly outward
 
-            // Wheel 2: Front-Left
-            gl.glPushMatrix();
-            gl.glTranslatef(-wheelXOffset, wheelLocalYPos, wheelFrontZ);
-            gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
-            drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
-            gl.glPopMatrix();
+    // Window dimensions (as fractions of cabin dimensions)
+    float frontWindowRelWidth = 0.80f;
+    float frontWindowRelHeight = 0.65f;
+    float rearWindowRelWidth = 0.75f;
+    float rearWindowRelHeight = 0.60f;
+    float sideWindowRelLength = 0.70f; // Length of side window along cabin's Z-axis
+    float sideWindowRelHeight = 0.60f;
 
-            // Wheel 3: Rear-Right
-            gl.glPushMatrix();
-            gl.glTranslatef(wheelXOffset, wheelLocalYPos, wheelRearZ);
-            gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
-            drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
-            gl.glPopMatrix();
+    gl.glPushMatrix(); // Group for all windows, translated to cabin's center
+    gl.glTranslatef(0.0f, cabinActualY, cabinActualZ); // Move to where cabin's center is
 
-            // Wheel 4: Rear-Left
-            gl.glPushMatrix();
-            gl.glTranslatef(-wheelXOffset, wheelLocalYPos, wheelRearZ);
-            gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
-            drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
-            gl.glPopMatrix();
-        };
+    // Front Windshield
+    // Centered on the cabin's front face.
+    gl.glPushMatrix();
+    gl.glTranslatef(0.0f, 0.0f, (cabinLength / 2.0f) + epsilonOffset); // Position on front face, slightly outward
+    gl.glScalef(cabinWidth * frontWindowRelWidth, cabinHeight * frontWindowRelHeight, windowPanelThickness);
+    drawCube(gl);
+    gl.glPopMatrix();
 
-        drawWheelsCode.run(); // Execute the wheel drawing
+    // Rear Windshield
+    // Centered on the cabin's rear face.
+    gl.glPushMatrix();
+    gl.glTranslatef(0.0f, 0.0f, -(cabinLength / 2.0f) - epsilonOffset); // Position on rear face, slightly outward
+    gl.glScalef(cabinWidth * rearWindowRelWidth, cabinHeight * rearWindowRelHeight, windowPanelThickness);
+    drawCube(gl);
+    gl.glPopMatrix();
 
-        gl.glPopMatrix(); // Restore original world matrix
-    }
+    // Side Window (Right)
+    // Centered on the cabin's right face.
+    // For side windows, the 'width' of the window panel is its thickness.
+    gl.glPushMatrix();
+    gl.glTranslatef((cabinWidth / 2.0f) + epsilonOffset, 0.0f, 0.0f); // Position on right face, slightly outward
+    gl.glScalef(windowPanelThickness, cabinHeight * sideWindowRelHeight, cabinLength * sideWindowRelLength);
+    drawCube(gl);
+    gl.glPopMatrix();
+
+    // Side Window (Left)
+    // Centered on the cabin's left face.
+    gl.glPushMatrix();
+    gl.glTranslatef(-(cabinWidth / 2.0f) - epsilonOffset, 0.0f, 0.0f); // Position on left face, slightly outward
+    gl.glScalef(windowPanelThickness, cabinHeight * sideWindowRelHeight, cabinLength * sideWindowRelLength);
+    drawCube(gl);
+    gl.glPopMatrix();
+
+    gl.glPopMatrix(); // End of windows group
+
+
+    // --- 3. Draw Wheels (as Cylinders) ---
+    gl.glColor3f(0.1f, 0.1f, 0.1f); // Dark grey/black for wheels
+
+    float wheelLocalYPos = 0.0f;
+    float wheelFrontZ = chassisLength * 0.38f;
+    float wheelRearZ = -chassisLength * 0.38f;
+    float wheelXOffset = chassisWidth / 2.0f + wheelThickness / 2.0f - (0.02f * scaleFactor);
+    int wheelSlices = 16;
+
+    // Wheel 1: Front-Right
+    gl.glPushMatrix();
+    gl.glTranslatef(wheelXOffset, wheelLocalYPos, wheelFrontZ);
+    gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+    drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
+    gl.glPopMatrix();
+
+    // Wheel 2: Front-Left
+    gl.glPushMatrix();
+    gl.glTranslatef(-wheelXOffset, wheelLocalYPos, wheelFrontZ);
+    gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+    drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
+    gl.glPopMatrix();
+
+    // Wheel 3: Rear-Right
+    gl.glPushMatrix();
+    gl.glTranslatef(wheelXOffset, wheelLocalYPos, wheelRearZ);
+    gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+    drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
+    gl.glPopMatrix();
+
+    // Wheel 4: Rear-Left
+    gl.glPushMatrix();
+    gl.glTranslatef(-wheelXOffset, wheelLocalYPos, wheelRearZ);
+    gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+    drawCylinder(gl, wheelRadius, wheelThickness, wheelSlices, 1);
+    gl.glPopMatrix();
+
+    gl.glPopMatrix(); // Restore original world matrix (from the very start of drawCar)
+}
     
     private void drawCube(GL2 gl) {
         gl.glBegin(GL2.GL_QUADS);
