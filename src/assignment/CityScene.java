@@ -164,7 +164,7 @@ public class CityScene implements GLEventListener, KeyListener {
     drawShopBuilding(gl, 3.0f, 0, 3.0f, 2.5f);
     
     // KLCC Petronas Twin Towers 
-    drawTwinTowers(gl, 6.0f, 0, -5.0f);
+    drawTwinTowers(gl, 5.5f, 0, -6.0f);
 
     }
 
@@ -1324,11 +1324,11 @@ public class CityScene implements GLEventListener, KeyListener {
 
         // Example cloud cluster positions
         float[][] cloudPositions = {
-            { -4.0f, 5.0f, -5.0f },
-            {  0.0f, 6.0f, -6.0f },
-            {  3.0f, 5.5f, -4.0f },
-            {  4.0f, 5.0f, 5.0f },
-            {  0.0f, 6.0f, 6.0f }
+            { -4.0f, 15.0f, -5.0f },
+            {  0.0f, 12.0f, -6.0f },
+            {  3.0f, 13f, -4.0f },
+            {  4.0f, 10f, 5.0f },
+            {  0.0f, 12f, 6.0f }
         };
 
         for (float[] pos : cloudPositions) {
@@ -1359,7 +1359,7 @@ public class CityScene implements GLEventListener, KeyListener {
     
     private void drawSun(GL2 gl) {
         gl.glPushMatrix();
-        gl.glTranslatef(7.0f, 10.0f, -7.0f);
+        gl.glTranslatef(7.0f, 23.0f, -7.0f);
         
         // Enable lighting for the sun
         gl.glEnable(GL2.GL_LIGHTING);
