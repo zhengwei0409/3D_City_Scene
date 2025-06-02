@@ -30,7 +30,7 @@ public class CityScene implements GLEventListener, KeyListener {
     
     // Building properties
     private static final float BUILDING_SIZE = 2.0f;
-    private static final float ROAD_WIDTH = 1.5f;
+    private static final float ROAD_WIDTH = 2.0f;
     private static final float SPACING = BUILDING_SIZE + ROAD_WIDTH;
     
     // Road properties
@@ -50,6 +50,38 @@ public class CityScene implements GLEventListener, KeyListener {
     
     private float trafficLightTimer = 0.0f;
     private int currentLight = 0; // 0=red, 1=yellow, 2=green
+    
+    float[][] redPath = {
+        {-9.5f, 0f},
+        {-9.5f, 9.5f},
+        {0f, 9.5f},
+        {9.5f, 9.5f},
+        {9.5f, 0f},
+        {9.5f, -9.5f},
+        {0f, -9.5f},
+        {-9.5f, -9.5f},
+        {-9.5f, 0f}
+    };
+    
+    float[][] bluePath = {
+        {8.5f, 0.5f},
+        {8.5f, 8.5f},
+        {0.5f, 8.5f},
+        {0.5f, 0.5f}
+    };
+    
+    float[][] greenPath = {
+        {-0.5f, -9.5f},
+        {-9.5f, -9.5f},
+        {-9.5f, 0.5f},
+        {9.5f, 0.5f},
+        {9.5f, -9.5f}
+    };
+
+    // Create cars
+    Car redCar = new Car(redPath, 0.08f);
+    Car blueCar = new Car(bluePath, 0.08f);
+    Car greenCar = new Car(greenPath, 0.1f);
     
     public static void main(String[] args) {
         JFrame frame = new JFrame("JOGL City Scene");
@@ -134,6 +166,11 @@ public class CityScene implements GLEventListener, KeyListener {
 
             // Draw sun
             drawSun(gl);
+            
+            // Update car positions
+            redCar.update();
+            blueCar.update();
+            greenCar.update();
             
             // Draw other elements
             drawCars(gl);
@@ -869,7 +906,7 @@ public class CityScene implements GLEventListener, KeyListener {
         drawMarkingsOnSegment(gl, C - RWH, -C + RWH, C + RWH, -RWH, false);
 
         gl.glEnd();
-    }    
+    }
     
     private void drawBuildingBody(GL2 gl, float width, float height, float depth) {
         gl.glBegin(GL2.GL_QUADS);
@@ -1050,20 +1087,22 @@ public class CityScene implements GLEventListener, KeyListener {
 
 
     private void drawCars(GL2 gl) {
-        // Red car, adjusted position
-        gl.glPushMatrix();
-        gl.glTranslatef(-1.2f, 0.0f, 0.1f); // Move to position
-        gl.glRotatef(-90.0f, 0.0f, 1.0f, 0.0f); // Rotate to face right
-        drawCar(gl, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f); // Red car
-        gl.glPopMatrix();
-        
-        drawCar(gl, 9.2f, 0.0f, -0.1f, 0.0f, 0.0f, 1.0f); // Blue car, adjusted position
-        drawCar(gl, 0.1f, 0.0f, -1.2f, 0.0f, 1.0f, 0.0f); // Green car, adjusted position
+        drawCarAt(gl, redCar, 1.0f, 0.0f, 0.0f);   // Red
+        drawCarAt(gl, blueCar, 0.0f, 0.0f, 1.0f);  // Blue
+        drawCarAt(gl, greenCar, 0.0f, 1.0f, 0.0f); // Green
     }
 
+    private void drawCarAt(GL2 gl, Car car, float r, float g, float b) {
+        gl.glPushMatrix();
+        gl.glTranslatef(car.x, 0.0f, car.z);
+        gl.glRotatef(car.rotationY, 0.0f, 1.0f, 0.0f);
+        drawCar(gl, 0, 0, 0, r, g, b); // Position inside drawCar is always local (0,0,0)
+        gl.glPopMatrix();
+    }
+    
     private void drawCar(GL2 gl, float x, float y, float z, float r, float g, float b) {
         // --- Smaller Car Dimensions ---
-        float scaleFactor = 0.6f; // Factor to make the car smaller
+        float scaleFactor = 0.5f; // Factor to make the car smaller
 
         float chassisWidth = 0.8f * scaleFactor;
         float chassisHeight = 0.3f * scaleFactor;
