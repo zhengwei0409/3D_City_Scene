@@ -20,9 +20,17 @@ import com.jogamp.opengl.util.gl2.GLUT;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
-
+// Step 1: Create a Class that Implements
+// GLEventListener: Required for OpenGL rendering (init(), display(), etc.)
+// KeyListener: Used for handle keyboard input.
 public class CityScene implements GLEventListener, KeyListener {
-    private GLU glu = new GLU();
+    // Step 2: Define Global Variables and Constants
+    private GLU glu = new GLU(); // // Utility class for 3D camera/view
+    
+    // ---- Below defined all the constant variable that will use in our 3D scene -----
+    
+    // These control where you're "looking" in the 3D world - like positioning a camera. 
+    // The camera starts 15 units back, 5 units up, and tilted down slightly.
     private float cameraX = 0.0f, cameraY = 5.0f, cameraZ = 15.0f;
     private float rotateX = -20.0f, rotateY = 0.0f;
     private static final int GRID_SIZE = 6; // 6x6 grid of buildings
@@ -83,57 +91,74 @@ public class CityScene implements GLEventListener, KeyListener {
     Car blueCar = new Car(bluePath, 0.08f);
     Car greenCar = new Car(greenPath, 0.1f);
     
+    // Step 6: Create the Main Method to Set Up the Window and Start Animation
     public static void main(String[] args) {
-        JFrame frame = new JFrame("JOGL City Scene");
-        GLProfile profile = GLProfile.getDefault();
-        GLCapabilities capabilities = new GLCapabilities(profile);
+        // Step 4.1: Create a JFrame (window).
+        JFrame frame = new JFrame("JOGL City Scene"); // JFrame is a standard Java window.
+        
+        // Step 1: Set up OpenGL version/profile
+        GLProfile profile = GLProfile.getDefault(); // This tells JOGL which version of OpenGL we want to use (usgin default).
+        GLCapabilities capabilities = new GLCapabilities(profile); // GLCapabilities holds settings like color depth, double buffering, etc.
         capabilities.setDoubleBuffered(true);
         capabilities.setHardwareAccelerated(true);
         
-        GLCanvas canvas = new GLCanvas(capabilities);
+        // Step 2: Create a GLCanvas (drawing surface) with the specified capabilities.
+        GLCanvas canvas = new GLCanvas(capabilities); // This is the area where all the 3D graphics will be drawn.
         CityScene scene = new CityScene();
-        canvas.addGLEventListener(scene);
+        
+        // Step 3: Attach our renderer (GLEventListener implementation) to the canvas.
+        canvas.addGLEventListener(scene); // We tell JOGL which class that implements GLEventListener (CityScene) contains our drawing logic.
         canvas.addKeyListener(scene);
         canvas.setFocusable(true);
         
-        frame.add(canvas);
+        // Step 4.2: Add the canvas to it.
+        frame.add(canvas); // We add the canvas to the window and make it visible.
         frame.setSize(800, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
         
-        FPSAnimator animator = new FPSAnimator(canvas, 60);
-        animator.start();
+        // Step 5: Start the animation loop using FPSAnimator to continuously redraw the scene.
+        FPSAnimator animator = new FPSAnimator(canvas, 60); // This keeps calling the display() method 60 times per second.
+        animator.start(); // makes your 3D scene animate or update smoothly
     }
     
+    // Step 3: Override GLEventListener Methods (init, display, reshape, dispose)
+    // Called once when the program starts. To initialize settings here (like colors, lighting, etc).
     @Override
     public void init(GLAutoDrawable drawable) {
-        GL2 gl = drawable.getGL().getGL2();
+        // Step 1: Get the OpenGL 2 context
+        GL2 gl = drawable.getGL().getGL2(); // This gives us access to OpenGL commands (version 2)
         
-        // Enable depth testing
-        gl.glEnable(GL.GL_DEPTH_TEST);
-        gl.glDepthFunc(GL.GL_LEQUAL);
+        // Step 2: Enable depth testing for proper 3D rendering
+        // This ensures that closer objects appear in front of farther ones
+        gl.glEnable(GL.GL_DEPTH_TEST); // Turn on depth buffer
+        gl.glDepthFunc(GL.GL_LEQUAL); // Pass fragments that are less than or equal to the existing depth
         
-        // Enable lighting
-        gl.glEnable(GL2.GL_LIGHTING);
-        gl.glEnable(GL2.GL_LIGHT0);
+        // Step 3: Enable basic lighting
+        gl.glEnable(GL2.GL_LIGHTING); // Turn on lighting system
+        gl.glEnable(GL2.GL_LIGHT0); // Enable light source 0 (OpenGL allows multiple lights)
         
-        // Set up light
-        float[] lightPos = {5.0f, 10.0f, 5.0f, 1.0f};
-        float[] lightColor = {1.0f, 1.0f, 1.0f, 1.0f};
-        float[] ambient = {0.3f, 0.3f, 0.3f, 1.0f};
+        // Step 4: Set up the light’s properties
+        float[] lightPos = {5.0f, 10.0f, 5.0f, 1.0f}; // Light position (x, y, z, w) — w=1 for positional light
+        float[] lightColor = {1.0f, 1.0f, 1.0f, 1.0f}; // Diffuse light color — white light
+        float[] ambient = {0.3f, 0.3f, 0.3f, 1.0f}; // Ambient light — soft general light
         
+        // Apply light properties to GL_LIGHT0
         gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, lightPos, 0);
         gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_DIFFUSE, lightColor, 0);
         gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_AMBIENT, ambient, 0);
         
-        // Enable color material
+        // Step 5: Enable color material tracking
+        // This allows object color (from glColor3f) to affect lighting
         gl.glEnable(GL2.GL_COLOR_MATERIAL);
         gl.glColorMaterial(GL.GL_FRONT, GL2.GL_AMBIENT_AND_DIFFUSE);
         
-        // Set clear color to sky blue
-        gl.glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
+        // Step 6: Set the background (clear) color
+        // This is the color used to clear the screen before each frame
+        gl.glClearColor(0.5f, 0.8f, 1.0f, 1.0f); // Sky blue background (RGBA)
     }
     
+    // Called repeatedly to render your 3D scene. Most drawing code goes here.
     @Override
     public void display(GLAutoDrawable drawable) {
             GL2 gl = drawable.getGL().getGL2();
@@ -157,7 +182,7 @@ public class CityScene implements GLEventListener, KeyListener {
 
             // Draw vegetation
             drawTrees(gl);
-            drawBrushes(gl); // ADD THIS LINE
+            drawBrushes(gl); 
             
             drawTrafficLights(gl);
             
@@ -179,11 +204,37 @@ public class CityScene implements GLEventListener, KeyListener {
             time += 0.016f;
             
             trafficLightTimer += 0.016f;
-            if (trafficLightTimer > 3.0f) { // Change every 3 seconds
+            if (trafficLightTimer > 2.0f) { // Change every 2 seconds
                 currentLight = (currentLight + 1) % 3;
                 trafficLightTimer = 0.0f;
             }
     }
+    
+    // Called when the window is resized. Adjust the viewport here.
+    @Override
+    public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
+        GL2 gl = drawable.getGL().getGL2();
+        
+        if (height <= 0) height = 1;
+        float aspect = (float) width / height;
+        
+        gl.glViewport(0, 0, width, height);
+        gl.glMatrixMode(GL2.GL_PROJECTION);
+        gl.glLoadIdentity();
+        
+        glu.gluPerspective(45.0, aspect, 0.1, 100.0);
+        gl.glMatrixMode(GL2.GL_MODELVIEW);
+        gl.glLoadIdentity();
+    }
+    
+    // Called when the program exits — clean up memory if needed.
+    @Override
+    public void dispose(GLAutoDrawable drawable) {
+        // Cleanup resources if needed
+    }
+    
+    
+    // Step 5: Helper Methods to Draw Parts of the Scene
     
     private void drawBuildingGrid(GL2 gl) {
     // Draw one building of each type in fixed positions
@@ -1398,28 +1449,9 @@ public class CityScene implements GLEventListener, KeyListener {
         gl.glEnable(GL2.GL_LIGHTING);
         gl.glPopMatrix();
     }
+   
     
-    @Override
-    public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
-        GL2 gl = drawable.getGL().getGL2();
-        
-        if (height <= 0) height = 1;
-        float aspect = (float) width / height;
-        
-        gl.glViewport(0, 0, width, height);
-        gl.glMatrixMode(GL2.GL_PROJECTION);
-        gl.glLoadIdentity();
-        
-        glu.gluPerspective(45.0, aspect, 0.1, 100.0);
-        gl.glMatrixMode(GL2.GL_MODELVIEW);
-        gl.glLoadIdentity();
-    }
-    
-    @Override
-    public void dispose(GLAutoDrawable drawable) {
-        // Cleanup resources if needed
-    }
-    
+    // Step 4: Override KeyListener Methods 
     @Override
     public void keyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
