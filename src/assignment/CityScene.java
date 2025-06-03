@@ -418,15 +418,16 @@ public class CityScene implements GLEventListener, KeyListener {
 
     //  ENHANCED STREET ELEMENTS
     private void drawStreetLights(GL2 gl) {
-        // Place street lights at intersections and along roads
-        float[] positions = {
-            -SPACING, 0, 0,    SPACING, 0, 0,    // Horizontal road
-            0, 0, -SPACING,    0, 0, SPACING     // Vertical road
-        };
-
-        for (int i = 0; i < positions.length; i += 3) {
-            drawStreetLight(gl, positions[i], positions[i+1], positions[i+2]);
-        }
+        // Streetlights near traffic lights
+        drawStreetLight(gl, -5.2f, 0.0f, -1.0f); // left of NW
+        drawStreetLight(gl, 5.2f, 0.0f, -1.0f);  // right of NE
+        drawStreetLight(gl, -5.2f, 0.0f, 1.0f);  // left of SW
+        drawStreetLight(gl, 5.2f, 0.0f, 1.0f);   // right of SE
+        
+        drawStreetLight(gl, -1.2f, 0.0f, -5.0f); // left of NW
+        drawStreetLight(gl, 1.2f, 0.0f, -5.0f);  // right of NE
+        drawStreetLight(gl, -1.2f, 0.0f, 5.0f);  // left of SW
+        drawStreetLight(gl, 1.2f, 0.0f, 5.0f);   // right of SE
     }
 
     private void drawStreetLight(GL2 gl, float x, float y, float z) {
@@ -760,69 +761,103 @@ public class CityScene implements GLEventListener, KeyListener {
         }
     }
     
-   private void drawTrafficLight(GL2 gl, float x, float y, float z) {
+   private void drawTrafficLight(GL2 gl, float x, float y, float z, float rotationY) {
     gl.glPushMatrix();
     gl.glTranslatef(x, y, z);
-    
-    // Traffic light pole
+    gl.glRotatef(rotationY, 0, 1, 0);
+
+    // ==== Traffic light pole as a cuboid ====
+    float halfWidth = 0.035f;
+    float height = 1.5f;
     gl.glColor3f(0.3f, 0.3f, 0.3f);
+
+    // Front face
     gl.glBegin(GL2.GL_QUADS);
-    gl.glVertex3f(-0.05f, 0.0f, -0.05f);
-    gl.glVertex3f(0.05f, 0.0f, -0.05f);
-    gl.glVertex3f(0.05f, 3.0f, -0.05f);
-    gl.glVertex3f(-0.05f, 3.0f, -0.05f);
+    gl.glVertex3f(-halfWidth, 0.0f, halfWidth);
+    gl.glVertex3f(halfWidth, 0.0f, halfWidth);
+    gl.glVertex3f(halfWidth, height, halfWidth);
+    gl.glVertex3f(-halfWidth, height, halfWidth);
     gl.glEnd();
-    
-    // Traffic light box
+
+    // Back face
+    gl.glBegin(GL2.GL_QUADS);
+    gl.glVertex3f(halfWidth, 0.0f, -halfWidth);
+    gl.glVertex3f(-halfWidth, 0.0f, -halfWidth);
+    gl.glVertex3f(-halfWidth, height, -halfWidth);
+    gl.glVertex3f(halfWidth, height, -halfWidth);
+    gl.glEnd();
+
+    // Left face
+    gl.glBegin(GL2.GL_QUADS);
+    gl.glVertex3f(-halfWidth, 0.0f, -halfWidth);
+    gl.glVertex3f(-halfWidth, 0.0f, halfWidth);
+    gl.glVertex3f(-halfWidth, height, halfWidth);
+    gl.glVertex3f(-halfWidth, height, -halfWidth);
+    gl.glEnd();
+
+    // Right face
+    gl.glBegin(GL2.GL_QUADS);
+    gl.glVertex3f(halfWidth, 0.0f, halfWidth);
+    gl.glVertex3f(halfWidth, 0.0f, -halfWidth);
+    gl.glVertex3f(halfWidth, height, -halfWidth);
+    gl.glVertex3f(halfWidth, height, halfWidth);
+    gl.glEnd();
+
+    // Top face
+    gl.glBegin(GL2.GL_QUADS);
+    gl.glVertex3f(-halfWidth, height, halfWidth);
+    gl.glVertex3f(halfWidth, height, halfWidth);
+    gl.glVertex3f(halfWidth, height, -halfWidth);
+    gl.glVertex3f(-halfWidth, height, -halfWidth);
+    gl.glEnd();
+
+    // Bottom face
+    gl.glBegin(GL2.GL_QUADS);
+    gl.glVertex3f(-halfWidth, 0.0f, -halfWidth);
+    gl.glVertex3f(halfWidth, 0.0f, -halfWidth);
+    gl.glVertex3f(halfWidth, 0.0f, halfWidth);
+    gl.glVertex3f(-halfWidth, 0.0f, halfWidth);
+    gl.glEnd();
+
+    // ==== Traffic light box ====
     gl.glColor3f(0.2f, 0.2f, 0.2f);
     gl.glPushMatrix();
-    gl.glTranslatef(0.0f, 2.7f, 0.0f);
+    gl.glTranslatef(0.0f, 1.2f, 0.0f);  // Lowered box
     gl.glScalef(0.3f, 0.6f, 0.2f);
     drawCube(gl);
     gl.glPopMatrix();
-    
-    // Red light
-    if (currentLight == 0) {
-        gl.glColor3f(1.0f, 0.2f, 0.2f); // Bright red when active
-    } else {
-        gl.glColor3f(0.3f, 0.1f, 0.1f); // Dark red when inactive
-    }
+
+    // ==== Lights ====
+    // Red
     gl.glPushMatrix();
-    gl.glTranslatef(0.0f, 2.9f, 0.12f);
+    gl.glTranslatef(0.0f, 1.4f, 0.12f);
+    gl.glColor3f(currentLight == 0 ? 1.0f : 0.3f, currentLight == 0 ? 0.2f : 0.1f, currentLight == 0 ? 0.2f : 0.1f);
     drawSphere(gl, 0.08f);
     gl.glPopMatrix();
-    
-    // Yellow light
-    if (currentLight == 1) {
-        gl.glColor3f(1.0f, 1.0f, 0.2f); // Bright yellow when active
-    } else {
-        gl.glColor3f(0.3f, 0.3f, 0.1f); // Dark yellow when inactive
-    }
+
+    // Yellow
     gl.glPushMatrix();
-    gl.glTranslatef(0.0f, 2.7f, 0.12f);
+    gl.glTranslatef(0.0f, 1.2f, 0.12f);
+    gl.glColor3f(currentLight == 1 ? 1.0f : 0.3f, currentLight == 1 ? 1.0f : 0.3f, currentLight == 1 ? 0.2f : 0.1f);
     drawSphere(gl, 0.08f);
     gl.glPopMatrix();
-    
-    // Green light
-    if (currentLight == 2) {
-        gl.glColor3f(0.2f, 1.0f, 0.2f); // Bright green when active
-    } else {
-        gl.glColor3f(0.1f, 0.3f, 0.1f); // Dark green when inactive
-    }
+
+    // Green
     gl.glPushMatrix();
-    gl.glTranslatef(0.0f, 2.5f, 0.12f);
+    gl.glTranslatef(0.0f, 1.0f, 0.12f);
+    gl.glColor3f(currentLight == 2 ? 0.2f : 0.1f, currentLight == 2 ? 1.0f : 0.3f, currentLight == 2 ? 0.2f : 0.1f);
     drawSphere(gl, 0.08f);
     gl.glPopMatrix();
-    
+
     gl.glPopMatrix();
 }
    
    private void drawTrafficLights(GL2 gl) {
     // Traffic lights at major intersections
-    drawTrafficLight(gl, -1.0f, 0.0f, -1.0f);  // Northwest intersection
-    drawTrafficLight(gl, 1.0f, 0.0f, -1.0f);   // Northeast intersection
-    drawTrafficLight(gl, -1.0f, 0.0f, 1.0f);   // Southwest intersection
-    drawTrafficLight(gl, 1.0f, 0.0f, 1.0f);    // Southeast intersection
+    drawTrafficLight(gl, -1.0f, 0.0f, -1.0f,0.0f);  // Northwest intersection
+    drawTrafficLight(gl, 1.0f, 0.0f, -1.0f,90.0f);   // Northeast intersection
+    drawTrafficLight(gl, -1.0f, 0.0f, 1.0f,-90.0f);   // Southwest intersection
+    drawTrafficLight(gl, 1.0f, 0.0f, 1.0f,180.0f);    // Southeast intersection
 }
 
     private void drawRoadQuad(GL2 gl, float x1, float z1, float x2, float z2, float x3, float z3, float x4, float z4) {
