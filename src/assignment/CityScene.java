@@ -306,6 +306,9 @@ public class CityScene implements GLEventListener, KeyListener {
         gl.glColor3f(0.3f, 0.3f, 0.4f);
         drawBuildingBody(gl, BUILDING_SIZE * 0.8f, height, BUILDING_SIZE * 0.8f);
 
+        gl.glColor3f(0.3f, 0.3f, 0.4f);
+        drawFlatRoof(gl, BUILDING_SIZE * 0.8f, height, BUILDING_SIZE * 0.8f);
+        
         // Antenna on top
         gl.glColor3f(0.8f, 0.1f, 0.1f);
         drawAntenna(gl, height);
@@ -331,6 +334,9 @@ public class CityScene implements GLEventListener, KeyListener {
 
         drawBuildingBody(gl, BUILDING_SIZE, height, BUILDING_SIZE);
 
+        gl.glColor3f(0.5f, 0.5f, 0.5f);
+        drawPeakedRoof(gl, BUILDING_SIZE, height, BUILDING_SIZE);
+        
         // Shop sign
         gl.glColor3f(1.0f, 1.0f, 1.0f);
         drawShopSign(gl, height);
