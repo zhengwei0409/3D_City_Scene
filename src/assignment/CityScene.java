@@ -252,7 +252,7 @@ public class CityScene implements GLEventListener, KeyListener {
     drawShopBuilding(gl, 3.0f, 0, 3.0f, 2.5f);
     
     // KLCC Petronas Twin Towers 
-    drawTwinTowers(gl, 5.5f, 0, -6.0f);
+    drawTwinTowers(gl, 5.0f, 0, -6.0f);
 
     }
 
@@ -1457,7 +1457,7 @@ public class CityScene implements GLEventListener, KeyListener {
     
     private void drawSun(GL2 gl) {
         gl.glPushMatrix();
-        gl.glTranslatef(7.0f, 23.0f, -7.0f);
+        gl.glTranslatef(7.0f, 18.5f, -7.0f);
         
         // Enable lighting for the sun
         gl.glEnable(GL2.GL_LIGHTING);
