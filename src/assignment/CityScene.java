@@ -8,8 +8,6 @@ import com.jogamp.opengl.*;
 
 import javax.swing.*;
 
-
-
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.glu.GLUquadric;
@@ -1047,10 +1045,10 @@ public class CityScene implements GLEventListener, KeyListener {
         drawTree(gl, 1.5f, 0.0f, 1.5f, 1.2f);
 
         // Trees along roads
-        drawTree(gl, -6.0f, 0.0f, 0.8f, 1.1f);
-        drawTree(gl, 6.0f, 0.0f, -0.8f, 1.0f);
-        drawTree(gl, 0.8f, 0.0f, -6.0f, 1.3f);
-        drawTree(gl, -0.8f, 0.0f, 6.0f, 1.2f);
+        drawTree(gl, -6.0f, 0.0f, 1.8f, 1.1f);
+        drawTree(gl, 6.0f, 0.0f, -1.8f, 1.0f);
+        drawTree(gl, 1.8f, 0.0f, -6.0f, 1.3f);
+        drawTree(gl, -1.8f, 0.0f, 2.0f, 1.2f);
     }
     
     private void drawTree(GL2 gl, float x, float y, float z, float height) {
